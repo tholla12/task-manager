@@ -2,7 +2,7 @@
 
 A simple to-do app built with React. Add, complete, filter and delete tasks. Tasks are saved in the browser, so they are still there after a refresh.
 
-**Live demo:** _https://tholla12.github.io/task-manager/_
+**Live demo:** https://tholla12.github.io/task-manager/
 
 ## Features
 
