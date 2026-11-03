@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React and Babel are loaded from a CDN so this project runs without a build step.
+       Babel lets the browser understand JSX in the script below. -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STORAGE_KEY = 'task-manager-tasks';
+    const FILTERS = ['all', 'active', 'completed'];
+
+    // Read saved tasks from the browser. Returns an empty list if nothing is saved.
+    function loadTasks() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    // One row in the list
+    function TaskItem({ task, onToggle, onDelete }) {
+      return (
+        <li className={task.completed ? 'task done' : 'task'}>
+          <label>
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => onToggle(task.id)}
+            />
+            <span>{task.text}</span>
+          </label>
+          <button
+            className="delete"
+            onClick={() => onDelete(task.id)}
+            aria-label={`Delete task: ${task.text}`}
+          >
+            Delete
+          </button>
+        </li>
+      );
+    }
+
+    // The All / Active / Completed buttons
+    function FilterBar({ current, onChange }) {
+      return (
+        <div className="filters" role="group" aria-label="Filter tasks">
+          {FILTERS.map((name) => (
+            <button
+              key={name}
+              className={current === name ? 'filter selected' : 'filter'}
+              aria-pressed={current === name}
+              onClick={() => onChange(name)}
+            >
+              {name[0].toUpperCase() + name.slice(1)}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function App() {
+      const [tasks, setTasks] = useState(loadTasks);
+      const [text, setText] = useState('');
+      const [filter, setFilter] = useState('all');
+
+      // Save to the browser every time the task list changes
+      useEffect(() => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        } catch (error) {
+          /* saving is optional, so ignore errors */
+        }
+      }, [tasks]);
+
+      function addTask(event) {
+        event.preventDefault();
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        setTasks([...tasks, { id: Date.now(), text: trimmed, completed: false }]);
+        setText('');
+      }
+
+      function toggleTask(id) {
+        setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+      }
+
+      function deleteTask(id) {
+        setTasks(tasks.filter((t) => t.id !== id));
+      }
+
+      function clearCompleted() {
+        setTasks(tasks.filter((t) => !t.completed));
+      }
+
+      const visibleTasks = tasks.filter((t) => {
+        if (filter === 'active') return !t.completed;
+        if (filter === 'completed') return t.completed;
+        return true;
+      });
+
+      const remaining = tasks.filter((t) => !t.completed).length;
+      const hasCompleted = tasks.some((t) => t.completed);
+
+      return (
+        <main className="app">
+          <h1>Task Manager</h1>
+
+          <form className="add" onSubmit={addTask}>
+            <label htmlFor="newTask" className="visually-hidden">New task</label>
+            <input
+              id="newTask"
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="What do you need to do?"
+              autoComplete="off"
+            />
+            <button type="submit">Add</button>
+          </form>
+
+          <FilterBar current={filter} onChange={setFilter} />
+
+          {visibleTasks.length === 0 ? (
+            <p className="empty">
+              {tasks.length === 0 ? 'No tasks yet. Add your first one above.' : `No ${filter} tasks.`}
+            </p>
+          ) : (
+            <ul className="list">
+              {visibleTasks.map((task) => (
+                <TaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              ))}
+            </ul>
+          )}
+
+          <footer className="footer">
+            <span>{remaining} {remaining === 1 ? 'task' : 'tasks'} left</span>
+            {hasCompleted && <button className="link" onClick={clearCompleted}>Clear completed</button>}
+          </footer>
+        </main>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
